@@ -1,7 +1,7 @@
 /****************************************
 * FIWARE Sensors
 * Fire detector
-* Version = 0.1
+* Version = 0.2
 * Attached peripherals:
 *  - Hall effect: A3144 on pin D2
 *  - ESP8266: TX-12, RX-13
