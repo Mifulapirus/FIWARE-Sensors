@@ -1,0 +1,15 @@
+AT+CIPSTART="TCP","130.206.127.115",1026
+AT+CIPSEND=26
+POST /NGSI10/updateContext
+AT+CIPSEND=23
+Accept:application/json
+AT+CIPSEND=23
+Accept-Encoding:deflate
+AT+CIPSEND=22
+Cache-Control:no-cache
+AT+CIPSEND=18
+Content-Length:675
+AT+CIPSEND=61
+Content-Type:application/x-www-form-urlencoded; charset=UTF-8
+AT+CIPSEND=166
+{"contextElements":[{"type":"FireSensor","isPattern":"false","id":"Sensor1","attributes":[{"name":"thereisfire","type":"bool","value":"0"}]}],"updateAction":"UPDATE"}

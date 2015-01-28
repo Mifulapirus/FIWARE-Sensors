@@ -12,10 +12,10 @@
 /*******************************
 * General variables
 *******************************/
-String FirmwareVersion = "0.1";
-String DeviceCategory = "FIWARE-Fire detector";
+#define FirmwareVersion "0.1"
+#define DeviceCategory "FD" //FIWARE-Fire detector";
 int DeviceID = 1; 
-String DeviceName = "Fire";
+#define DeviceName "F"
 
 /*******************************
 * WiFi Stuff
@@ -25,14 +25,77 @@ String DeviceName = "Fire";
 SoftwareSerial WiFiSerial(12, 11); // RX, TX
 String OwnIP = "0.0.0.0";
 
-/*******************************
+/*************************************
 * FIWARE Stuff
+*-------------------------------------
+* Server to be used: 130.206.127.115
+* Port: 1026
+* Protocol: NGSI10
+* Service: updateContext
+* Final URL: "http://130.206.127.115:1026/NGSI10/updateContext"
+--------------------------------------
+* Typical message
+*-------------------------------------
+* Accept:application/json
+* Accept-Encoding:deflate
+* Cache-Control:no-cache
+* Content-Length:675
+* Content-Type:application/x-www-form-urlencoded; charset=UTF-8
+* {"contextElements": [
+*   {"type": "FireSensor",
+*    "isPattern": "false",
+*    "id": "Sensor1",
+*    "attributes": [
+*      {"name": "thereisfire",
+*       "type": "bool",
+*       "value": "0"
+*      }]
+*  }],
+*  "updateAction": "UPDATE"
+* }
+* /EOF
+*--------------------------------------
+* The shortest way to send it would be as follows
+* Accept:application/json
+* Accept-Encoding:deflate
+* Cache-Control:no-cache
+* Content-Length:675
+* Content-Type:application/x-www-form-urlencoded; charset=UTF-8
+* {"contextElements":[{"type":"FireSensor","isPattern":"false","id":"Sensor1","attributes":[{"name":"thereisfire","type":"bool","value":"0"}]}],"updateAction":"UPDATE"} /EOF
+*----------------------------------------
+* Adding special characters, each string should be as the following:
+* "Accept:application/json\r\n"
+* "Accept-Encoding:deflate\r\n"
+* "Cache-Control:no-cache\r\n"
+* "Content-Length:675\r\n"
+* "Content-Type:application/x-www-form-urlencoded; charset=UTF-8\r\n"
+* "{\"contextElements\":[{\"type\":\"FireSensor\",\"isPattern\":\"false\",\"id\":\"Sensor1\",\"attributes\":[{\"name\":\"thereisfire\",\"type\":\"bool\",\"value\":\"0\"}]}],\"updateAction\":\"UPDATE\"}\r\n\0"
 ********************************/
-String ContextBrokerURL = "http://localhost:1026";
-String NGSIHeader = "/NGSI10/updateContext";
-String CBUpdate = "{\"contextElements\":[{\"type\":\"FireSensor\",\"isPattern\": \"false\",\"id\": \"Sensor1\",\"attributes\": [ {\"name\": \"thereisfire\",\"type\": \"bool\",\"value\": \"0\"} ] } ], \"updateAction\": \"UPDATE\"}";
+#define CBIP "130.206.127.115"
+//String CBIP = "192.168.0.111";
+#define CBPort "1026"
+
+/*String CBUpdateURL = "POST /NGSI10/updateContext\r\n";
+String CBHeader1 = "Accept:application/json\r\n";
+String CBHeader2 = "Accept-Encoding:deflate\r\n";
+String CBHeader3 = "Cache-Control:no-cache\r\n";
+String CBHeader4 = "Content-Length:166\r\n";
+String CBHeader5 = "Content-Type:application/x-www-form-urlencoded; charset=UTF-8\r\n";
+String CBUpdateMessage1 = "{\"contextElements\":[{\r\n";
+String CBUpdateMessage2= "\"type\":\"FireSensor\",\r\n";
+String CBUpdateMessage3 = "\"isPattern\":\"false\",\r\n";
+String CBUpdateMessage4 = "\"id\":\"Sensor1\",\r\n";
+String CBUpdateMessage5 = "\"attributes\":[{\r\n";
+String CBUpdateMessage6 = "\"name\":\"thereisfire\",\r\n";
+String CBUpdateMessage7 = "\"type\":\"bool\",\r\n";
+String CBUpdateMessage8 = "\"value\":\"0\"}]}],\r\n";
+String CBUpdateMessage9 = "\"updateAction\":\"UPDATE\"}\r\n";
+*/
+
+#define UpdateString "POST /NGSI10/updateContext\r\nAccept:application/json\r\nAccept-Encoding:deflate\r\nCache-Control:no-cache\r\nContent-Length:166\r\nContent-Type:application/x-www-form-urlencoded; charset=UTF-8\r\n{\"contextElements\":[{\r\n\"type\":\"FireSensor\",\r\n\"isPattern\":\"false\",\r\n\"id\":\"Sensor1\",\r\n\"attributes\":[{\r\n\"name\":\"thereisfire\",\r\n\"type\":\"bool\",\r\n\"value\":\"0\"}]}],\r\n\"updateAction\":\"UPDATE\"}\r\n"
+
 long CBLastUpdate = 0;
-long CBRegularUpdateDelay = 60000*60;  //1 hour
+long CBRegularUpdateDelay = 10000;  //10 sec
 long CBMinUpdateDelay = 10000;         //10 seconds
 long CBUpdateDelay = CBRegularUpdateDelay;
 
@@ -62,7 +125,8 @@ void setup() {
   attachInterrupt(0, FireDetected, RISING);
   
   InitWiFi();
-//  WiFiEcho();
+  //WiFiEcho();
+  UpdateCB();
 }
 
 /************************************
@@ -79,8 +143,8 @@ void loop() {
 void FireDetected() {
   long CurrentTime = millis();
   digitalWrite(LedPin, HIGH);
-  Serial.print (CurrentTime)
-  Serial.print(" - FIRE!");
+  Serial.print (CurrentTime);
+  Serial.println(" - FIRE!");
   digitalWrite(LedPin, LOW);
 }
 
@@ -90,40 +154,80 @@ void FireDetected() {
 void UpdateCB() {
   Serial.print("ContextBroker update @ ");
   Serial.println(millis());
-  OpenTCP(ContextBrokerURL);
-  String cmd = NGSIHeader;
-  cmd += CBUpdate;
-  cmd += "\r\n";
-  WiFiSerial.write("AT+CIPSEND=");
-  WiFiSerial.write(cmd.length());
+  while (!OpenTCP(CBIP, CBPort)) {}
+  delay(1000);
+  SendToHost(UpdateString);
+  /*delay(100);
+  SendToHost(CBHeader1);
+  delay(100);
+  SendToHost(CBHeader2);
+  delay(100);
+  SendToHost(CBHeader3);
+  delay(100);
+  SendToHost(CBHeader4);
+  delay(100);
+  SendToHost(CBHeader5);
+  delay(100);
+  SendToHost(CBUpdateMessage1);
+  delay(100);
+  SendToHost(CBUpdateMessage2);
+  delay(100);
+  SendToHost(CBUpdateMessage3);
+  delay(100);
+  SendToHost(CBUpdateMessage4);
+  delay(100);
+  SendToHost(CBUpdateMessage5);
+  delay(100);
+  SendToHost(CBUpdateMessage6);
+  delay(100);
+  SendToHost(CBUpdateMessage7);
+  delay(100);
+  SendToHost(CBUpdateMessage8);
+  delay(100);
+  SendToHost(CBUpdateMessage9);*/
   
-  if (ExpectResponse(">")) {
-    Serial.print(">");
-    SendDebug(cmd);
-  }
-  //else {CloseTCP();}
 }
 
 void PeriodicUpdate() {
   if (millis() > CBLastUpdate + CBUpdateDelay) {
     UpdateCB();
+    CBLastUpdate = millis();
   }
 }
 
 /***********************************
 * WiFi Functions
 ***********************************/
-boolean OpenTCP(String IP) {
+boolean OpenTCP(String IP, String Port) {
   String cmd = "AT+CIPSTART=\"TCP\",\""; 
   cmd += IP;
-  cmd += "\",80";
+  cmd += "\",";
+  cmd += Port;
   SendDebug(cmd);
   delay(1000);
-  if (WiFiSerial.find("Error")) {
+  if (WiFiSerial.find("ERROR")) {
     Serial.println("ERROR: 1");  //Unable to open TCP connection
     return false;
   }
   return true;
+}
+
+boolean SendToHost(String cmd) {
+  Serial.print("Sending CMD: ");
+  Serial.println(cmd);
+  Serial.print("Length: ");
+  Serial.println(cmd.length());
+  WiFiSerial.print("AT+CIPSEND=");
+  WiFiSerial.println(cmd.length());
+  delay(200);
+  //if (ExpectResponse(">")) {
+    Serial.print(">");
+    Serial.print(cmd);
+    WiFiSerial.print(cmd);
+    //return true;
+  //}
+  //return false;
+  //else {CloseTCP();}
 }
 
 void WiFiEcho() {
@@ -152,6 +256,7 @@ boolean InitWiFi() {
   while (!WiFiReboot())  {}
   //while (!CheckWiFi())   {}
   while (!ConnectWiFi()) {}
+  SetCIPMODE(false);
   return true;
 }
 
@@ -211,7 +316,7 @@ String GetIP() {
   WiFiSerial.println("AT+CIFSR"); // Get IP
   String _IP;
   char incomingByte = ' ';
-  delay(20);
+  delay(100);
   while (WiFiSerial.available() > 0) {
     // read the incoming byte:
     incomingByte = WiFiSerial.read();
@@ -242,4 +347,11 @@ boolean ConnectWiFi() {
   else {
     Serial.println("ERROR: 4"); //"ERROR: Not connected"
   }
+}
+
+boolean SetCIPMODE(boolean Value) {
+  Serial.print("Set CIP Mode to ");
+  Serial.println(Value);
+  if (Value) {WiFiSerial.println("AT+CIPMODE=1");}
+  else {WiFiSerial.println("AT+CIPMODE=0");}
 }
