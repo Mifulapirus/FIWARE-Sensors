@@ -5,7 +5,6 @@
 * Attached peripherals:
 *  - Hall effect: A3144 on pin D2
 *  - ESP8266: TX-12, RX-13
-*  - TPA81: 
 *****************************************/
 #include <stdlib.h>
 #include <SoftwareSerial.h>
