@@ -5,9 +5,11 @@
 * Attached peripherals:
 *  - Hall effect: A3144 on pin D2
 *  - ESP8266: TX-12, RX-13
+*  - TPA81: 
 *****************************************/
 #include <stdlib.h>
 #include <SoftwareSerial.h>
+//#include <Wire.h>
 
 /*******************************
 * General variables
@@ -15,7 +17,7 @@
 #define FirmwareVersion "0.1"
 #define DeviceCategory "FD" //FIWARE-Fire detector";
 int DeviceID = 1; 
-#define DeviceName "F"
+#define DeviceName "\"FireSensor\""
 long KeepAliveDelay = 1000;
 long PreviousKeepAlive = 0;
 
@@ -26,9 +28,22 @@ long PreviousKeepAlive = 0;
 #define SSID "Interne"
 #define PASS "Mec0mebien"
 SoftwareSerial WiFiSerial(12, 11); // RX, TX
-String OwnIP = "0.0.0.0";
+String OwnIP = "000.000.000.000";
 String WiFiLongMessage;
-#define ResponseOK "OK"
+
+//----------------------
+//Messages sent
+#define ResponseOK     "OK"
+#define Error          "ERROR "
+  #define ErrorUnableToLink             "1"
+  #define SendLongMessageError          "2"  
+  #define ErrorModuleDoesntRespond      "3"
+  #define ErrorModuleDoesntRespondToAT  "4"
+  #define ErrorResponseNotFound         "5"
+  #define ErrorUnableToConnect          "6"
+  
+#define CIPSTART       "AT+CIPSTART=\"TCP\",\""
+
 
 /*************************************
 * FIWARE Stuff
@@ -69,15 +84,14 @@ String WiFiLongMessage;
 * "{\"contextElements\":[{\"type\":\"FireSensor\",\"isPattern\":\"false\",\"id\":\"Sensor1\",\"attributes\":[{\"name\":\"thereisfire\",\"type\":\"bool\",\"value\":\"0\"}]}],\"updateAction\":\"UPDATE\"}\r\n\0"
 ********************************/
 #define CBIP "130.206.127.115"
-//String CBIP = "192.168.0.111";
 #define CBPort "1026"
 
 #define CBStaticHeader "POST /NGSI10/updateContext\r\nAccept:application/json\r\nAccept-Encoding:deflate\r\nCache-Control:no-cache\r\nContent-Type: application/json\r\nContent-Length:"
 String CBElement_Length = "169";
 #define CBBody1 "\r\n\r\n{\"contextElements\":[{\"type\":" //\"FireSensor\"
-String CBElement_Type = "\"FireSensor\"";
+String CBElement_Type = DeviceName;
 #define CBBody2 ",\"isPattern\":\"false\",\"id\":"//\"Sensor1\"
-String CBElement_ID = "\"FireSensor\"";
+String CBElement_ID = DeviceName;
 #define CBBody3 ",\"attributes\":[{\"name\":" //\"thereisfire\"
 String CBElement_AttName = "\"thereisfire\"";
 #define CBBody4 ",\"type\":" //\"bool\"
@@ -128,7 +142,7 @@ void setup() {
 }
 
 /************************************
-* Main Loop
+* General Functions
 ************************************/
 void loop() {
   PeriodicUpdate();  //Just Update the sensor, so we know it is alive
@@ -136,6 +150,11 @@ void loop() {
   if (!digitalRead(HallPin)) {FireDetected();}
 
 }
+
+void PrintError(char* ErrorMessage) {
+  Serial.print(Error);
+  Serial.println(ErrorMessage);
+  }
 
 
 /****************************
@@ -209,31 +228,31 @@ void PeriodicUpdate() {
 * WiFi Functions
 ***********************************/
 boolean OpenTCP(String IP, String Port) {
-  String cmd = "AT+CIPSTART=\"TCP\",\""; 
+  String cmd = CIPSTART; 
   cmd += IP;
   cmd += "\",";
   cmd += Port;
   SendDebug(cmd);
   if (!ExpectResponse("Linked")) {
-    Serial.println("ERROR: 1 unable to link");
+    PrintError(ErrorUnableToLink);
     return false;
   }
   return true;
 }
 
 boolean SendLongMessage(char* ExpectedReply) {
-  Serial.println("Sending CMD: ");
+  Serial.println("Sending: ");
   Serial.println(WiFiLongMessage);
   WiFiSerial.print("AT+CIPSEND=");
   WiFiSerial.println(WiFiLongMessage.length());
   delay(200); 
   WiFiSerial.print(WiFiLongMessage);
   if (ExpectResponse(ExpectedReply)) {
-    Serial.println("CB Updated");
+    Serial.println(ResponseOK);
     return true;
     }
   else {
-    Serial.println("CB Error");
+    PrintError(SendLongMessageError);
     return false;
     }
 }
@@ -270,13 +289,13 @@ boolean InitWiFi() {
 
 boolean WiFiReboot() {
   WiFiSerial.flush();
-  Serial.println("Rebooting WiFi");
+  Serial.println("Reboot");
   WiFiSerial.println("AT+RST"); // restet and test if module is redy
   if (ExpectResponse("Ready")) {
     return true;  
   }
   else {
-    Serial.println("ERROR: 2"); //Module doesn't respond
+    PrintError(ErrorModuleDoesntRespond);
     return false;
   }
 }
@@ -288,7 +307,7 @@ boolean CheckWiFi() {
     return true;
   }
   else {
-    Serial.println("ERROR: 3"); //"WiFi module does not respond to AT"
+    PrintError(ErrorModuleDoesntRespondToAT);
     InitWiFi();
     return false;
   }
@@ -311,26 +330,23 @@ boolean ExpectResponse(char* _Expected) {
     }
     delay(1);
   }
-  Serial.print("ERROR: ");
-  Serial.print(_Expected);
-  Serial.println(" not found");
+  PrintError(ErrorResponseNotFound);
   return false;
 }
 
 String GetIP() {
   WiFiSerial.flush();
   WiFiSerial.println("AT+CIFSR"); // Get IP
-  String _IP;
+  OwnIP = "";
   char incomingByte = ' ';
   delay(100);
   while (WiFiSerial.available() > 0) {
     // read the incoming byte:
     incomingByte = WiFiSerial.read();
     // say what you got:
-    _IP += incomingByte;
+    OwnIP += incomingByte;
     delay(1);
   }
-  OwnIP = _IP;
   return OwnIP;
 }
 
@@ -346,18 +362,15 @@ boolean ConnectWiFi() {
   cmd += "\"";
   SendDebug(cmd);
   if (ExpectResponse(ResponseOK)) {
-    Serial.println("Connected!");
     Serial.print("IP: ");
     Serial.println(GetIP());
   }
   else {
-    Serial.println("ERROR: 4"); //"ERROR: Not connected"
+    PrintError(ErrorUnableToConnect);
   }
 }
 
 boolean SetCIPMODE(boolean Value) {
-  Serial.print("Set CIP Mode to ");
-  Serial.println(Value);
   if (Value) {WiFiSerial.println("AT+CIPMODE=1");}
   else {WiFiSerial.println("AT+CIPMODE=0");}
 }
