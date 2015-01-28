@@ -16,6 +16,9 @@
 #define DeviceCategory "FD" //FIWARE-Fire detector";
 int DeviceID = 1; 
 #define DeviceName "F"
+long KeepAliveDelay = 1000;
+long PreviousKeepAlive = 0;
+
 
 /*******************************
 * WiFi Stuff
@@ -56,15 +59,7 @@ String WiFiLongMessage;
 *  "updateAction": "UPDATE"
 * }
 * /EOF
-*--------------------------------------
-* The shortest way to send it would be as follows
-* Accept:application/json
-* Accept-Encoding:deflate
-* Cache-Control:no-cache
-* Content-Length:675
-* Content-Type:application/x-www-form-urlencoded; charset=UTF-8
-* {"contextElements":[{"type":"FireSensor","isPattern":"false","id":"Sensor1","attributes":[{"name":"thereisfire","type":"bool","value":"0"}]}],"updateAction":"UPDATE"} /EOF
-*----------------------------------------
+*------------------------------
 * Adding special characters, each string should be as the following:
 * "Accept:application/json\r\n"
 * "Accept-Encoding:deflate\r\n"
@@ -93,6 +88,8 @@ String CBElement_AttValue = "\"0\"";
 
 #define AttValue_1 "\"1\""
 #define AttValue_0 "\"0\""
+
+#define CBPostOK "\"code\" : \"200\""
 
 long CBLastUpdate = 0;
 long CBRegularUpdateDelay = 60000;  //60 sec
@@ -164,7 +161,18 @@ void UpdateCB() {
   while (!OpenTCP(CBIP, CBPort)) {}
   delay(1000);
   //Calculate CBElement_Length
-  CBElement_Length = String(sizeof(CBBody1)-2 + CBElement_Type.length() + sizeof(CBBody2)-2 + CBElement_ID.length() + sizeof(CBBody3)-2 + CBElement_AttName.length() + sizeof(CBBody4)-2 + CBElement_AttType.length() + sizeof(CBBody5)-2 + CBElement_AttValue.length() + sizeof(CBBody6)-2);
+  CBElement_Length = String(sizeof(CBBody1)-2
+                     + CBElement_Type.length() 
+                     + sizeof(CBBody2)-2 
+                     + CBElement_ID.length() 
+                     + sizeof(CBBody3)-2 
+                     + CBElement_AttName.length() 
+                     + sizeof(CBBody4)-2 
+                     + CBElement_AttType.length() 
+                     + sizeof(CBBody5)-2 
+                     + CBElement_AttValue.length() 
+                     + sizeof(CBBody6)-2);
+                     
   WiFiLongMessage = CBStaticHeader;
   WiFiLongMessage += CBElement_Length;
   WiFiLongMessage +=  CBBody1;
@@ -179,21 +187,21 @@ void UpdateCB() {
   WiFiLongMessage += CBElement_AttValue;
   WiFiLongMessage += CBBody6;
   
-  SendLongMessage();
+  SendLongMessage(CBPostOK);
   CloseTCP();
   CBLastUpdate = millis();  
 }
 
 void PeriodicUpdate() {
   long Now = millis();
-  Serial.print("Now: ");
-  Serial.println(Now);
-  Serial.print("Last Update: ");
-  Serial.println(CBLastUpdate);
-  Serial.print("Delay: ");
-  Serial.println(CBUpdateDelay);
   if (Now > CBLastUpdate + CBUpdateDelay) {
     UpdateCB();
+  }
+  else if (Now > PreviousKeepAlive + KeepAliveDelay) {
+    digitalWrite(LedPin, HIGH);
+    Serial.print(".");
+    digitalWrite(LedPin, LOW);
+    PreviousKeepAlive = Now;
   }
 }
 
@@ -206,24 +214,28 @@ boolean OpenTCP(String IP, String Port) {
   cmd += "\",";
   cmd += Port;
   SendDebug(cmd);
-  delay(1000);
-  if (WiFiSerial.find("ERROR")) {
-    Serial.println("ERROR: 1");  //Unable to open TCP connection
+  if (!ExpectResponse("Linked")) {
+    Serial.println("ERROR: 1 unable to link");
     return false;
   }
   return true;
 }
 
-boolean SendLongMessage() {
-  Serial.print("Sending CMD...");
+boolean SendLongMessage(char* ExpectedReply) {
+  Serial.println("Sending CMD: ");
   Serial.println(WiFiLongMessage);
-  Serial.print("Length: ");
-  Serial.println(WiFiLongMessage.length());
   WiFiSerial.print("AT+CIPSEND=");
   WiFiSerial.println(WiFiLongMessage.length());
-  delay(200);
+  delay(200); 
   WiFiSerial.print(WiFiLongMessage);
-  Serial.print("Sent");
+  if (ExpectResponse(ExpectedReply)) {
+    Serial.println("CB Updated");
+    return true;
+    }
+  else {
+    Serial.println("CB Error");
+    return false;
+    }
 }
 
 void WiFiEcho() {
@@ -244,7 +256,7 @@ void SendDebug(String cmd) {
 
 boolean CloseTCP() {
   SendDebug("AT+CIPCLOSE");
-  if (!ExpectResponse(ResponseOK)) {CheckWiFi();}
+  if (!ExpectResponse("Unlink")) {CheckWiFi();}
 }
 
 
@@ -261,8 +273,6 @@ boolean WiFiReboot() {
   Serial.println("Rebooting WiFi");
   WiFiSerial.println("AT+RST"); // restet and test if module is redy
   if (ExpectResponse("Ready")) {
-    Serial.println("->Ready");
-    //SendDebug("AT+CIPMODE=1");
     return true;  
   }
   else {
@@ -286,12 +296,12 @@ boolean CheckWiFi() {
 
 boolean ExpectResponse(char* _Expected) {
   Serial.print("Waiting for ");
-  Serial.println(_Expected);
+  Serial.print(_Expected);
+  Serial.print(": ");
 
   for (int i = 0; i < 10; i++) {
     if (WiFiSerial.find(_Expected)) {
-      //Serial.print("RECEIVED: ");
-      //Serial.println(_Expected);
+      Serial.println(ResponseOK);
       return true;
     }
 
