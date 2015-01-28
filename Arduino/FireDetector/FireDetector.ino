@@ -92,7 +92,7 @@ String CBUpdateMessage8 = "\"value\":\"0\"}]}],\r\n";
 String CBUpdateMessage9 = "\"updateAction\":\"UPDATE\"}\r\n";
 */
 
-#define UpdateString "POST /NGSI10/updateContext\r\nAccept:application/json\r\nAccept-Encoding:deflate\r\nCache-Control:no-cache\r\nContent-Length:166\r\nContent-Type:application/x-www-form-urlencoded; charset=UTF-8\r\n{\"contextElements\":[{\r\n\"type\":\"FireSensor\",\r\n\"isPattern\":\"false\",\r\n\"id\":\"Sensor1\",\r\n\"attributes\":[{\r\n\"name\":\"thereisfire\",\r\n\"type\":\"bool\",\r\n\"value\":\"0\"}]}],\r\n\"updateAction\":\"UPDATE\"}\r\n"
+#define UpdateString "POST /NGSI10/updateContext\r\nAccept:application/json\r\nAccept-Encoding:deflate\r\nCache-Control:no-cache\r\nContent-Length:166\r\nContent-Type: application/json\r\n\r\n{\"contextElements\":[{\r\n\"type\":\"FireSensor\",\r\n\"isPattern\":\"false\",\r\n\"id\":\"Sensor1\",\r\n\"attributes\":[{\r\n\"name\":\"thereisfire\",\r\n\"type\":\"bool\",\r\n\"value\":\"0\"}]}],\r\n\"updateAction\":\"UPDATE\"}\r\n\r\n"
 
 long CBLastUpdate = 0;
 long CBRegularUpdateDelay = 10000;  //10 sec
@@ -157,34 +157,7 @@ void UpdateCB() {
   while (!OpenTCP(CBIP, CBPort)) {}
   delay(1000);
   SendToHost(UpdateString);
-  /*delay(100);
-  SendToHost(CBHeader1);
-  delay(100);
-  SendToHost(CBHeader2);
-  delay(100);
-  SendToHost(CBHeader3);
-  delay(100);
-  SendToHost(CBHeader4);
-  delay(100);
-  SendToHost(CBHeader5);
-  delay(100);
-  SendToHost(CBUpdateMessage1);
-  delay(100);
-  SendToHost(CBUpdateMessage2);
-  delay(100);
-  SendToHost(CBUpdateMessage3);
-  delay(100);
-  SendToHost(CBUpdateMessage4);
-  delay(100);
-  SendToHost(CBUpdateMessage5);
-  delay(100);
-  SendToHost(CBUpdateMessage6);
-  delay(100);
-  SendToHost(CBUpdateMessage7);
-  delay(100);
-  SendToHost(CBUpdateMessage8);
-  delay(100);
-  SendToHost(CBUpdateMessage9);*/
+  CloseTCP();
   
 }
 
