@@ -15,8 +15,8 @@
 *******************************/
 #define FirmwareVersion "0.1"
 #define DeviceCategory "FD" //FIWARE-Fire detector";
-int DeviceID = 1; 
-#define DeviceName "\"FireSensor\""
+String DeviceID = "\"FireSensor_1\""; 
+#define DeviceType "\"FireSensor\""
 long KeepAliveDelay = 1000;
 long PreviousKeepAlive = 0;
 
@@ -24,9 +24,11 @@ long PreviousKeepAlive = 0;
 /*******************************
 * WiFi Stuff
 *******************************/
-#define SSID "Interne"
-#define PASS "Mec0mebien"
-SoftwareSerial WiFiSerial(12, 11); // RX, TX
+//#define SSID "Interne"
+//#define PASS "Mec0mebien"
+#define SSID "bamboo_wifi"
+#define PASS "paloverde"
+SoftwareSerial WiFiSerial(2, 3); // RX, TX
 String OwnIP = "000.000.000.000";
 String WiFiLongMessage;
 
@@ -88,16 +90,22 @@ String WiFiLongMessage;
 #define CBStaticHeader "POST /NGSI10/updateContext\r\nAccept:application/json\r\nAccept-Encoding:deflate\r\nCache-Control:no-cache\r\nContent-Type: application/json\r\nContent-Length:"
 String CBElement_Length = "169";
 #define CBBody1 "\r\n\r\n{\"contextElements\":[{\"type\":" //\"FireSensor\"
-String CBElement_Type = DeviceName;
+String CBElement_Type = DeviceType;
 #define CBBody2 ",\"isPattern\":\"false\",\"id\":"//\"Sensor1\"
-String CBElement_ID = DeviceName;
+String CBElement_ID = DeviceID;
 #define CBBody3 ",\"attributes\":[{\"name\":" //\"thereisfire\"
-String CBElement_AttName = "\"thereisfire\"";
+String CBElement_Att_1_Name = "\"FireDetected\"";
 #define CBBody4 ",\"type\":" //\"bool\"
-String CBElement_AttType = "\"bool\"";
+String CBElement_Att_1_Type = "\"bool\"";
 #define CBBody5 ",\"value\":" //\"0\"
-String CBElement_AttValue = "\"0\"";
-#define CBBody6 "}]}],\"updateAction\":\"APPEND\"}\r\n"
+String CBElement_Att_1_Value = "\"0\"";
+#define CBBody6 "},{\"name\":"
+String CBElement_Att_2_Name = "\"FirePosition\"";
+#define CBBody7 ",\"type\":" //\"bool\"
+String CBElement_Att_2_Type = "\"int\"";
+#define CBBody8 ",\"value\":" //\"0\"
+String CBElement_Att_2_Value = "\"0\"";
+#define CBBody9 "}]}],\"updateAction\":\"APPEND\"}\r\n"
 
 #define AttValue_1 "\"1\""
 #define AttValue_0 "\"0\""
@@ -112,20 +120,20 @@ long CBUpdateDelay = CBRegularUpdateDelay;
 /******************************
 * Pin definition
 ******************************/
-const int HallPin = 2;       // Hall Effect Sensor pin
-const int LedPin =  13;      // Onboard LED pin
+const int PIRPin = 12;       // Hall Effect Sensor pin
+const int LedPin = 13;      // Onboard LED pin
 
 /****************************
 * Setup
 ****************************/
 void setup() {
   pinMode(LedPin, OUTPUT);
-  pinMode(HallPin, INPUT);
+  pinMode(PIRPin, INPUT);
   
   Serial.begin(9600);
   WiFiSerial.begin(9600);
   
-  Serial.println(DeviceName);
+  Serial.println(DeviceType);
   Serial.println(DeviceCategory);
   Serial.print("V. ");
   Serial.println(FirmwareVersion);
@@ -146,7 +154,7 @@ void setup() {
 void loop() {
   PeriodicUpdate();  //Just Update the sensor, so we know it is alive
   //Check if there is fire and Update
-  if (!digitalRead(HallPin)) {FireDetected();}
+  if (digitalRead(PIRPin)) {FireDetected();}
 
 }
 
@@ -164,9 +172,10 @@ void FireDetected() {
   digitalWrite(LedPin, HIGH);
   Serial.print (CurrentTime);
   Serial.println(" - FIRE!");
-  CBElement_AttValue=AttValue_1;
+  CBElement_Att_1_Value=AttValue_1;
   UpdateCB();
-  CBElement_AttValue=AttValue_0;
+  CBElement_Att_1_Value=AttValue_0;
+  delay(5000);
   digitalWrite(LedPin, LOW);
 }
 
@@ -184,12 +193,19 @@ void UpdateCB() {
                      + sizeof(CBBody2)-2 
                      + CBElement_ID.length() 
                      + sizeof(CBBody3)-2 
-                     + CBElement_AttName.length() 
+                     + CBElement_Att_1_Name.length() 
                      + sizeof(CBBody4)-2 
-                     + CBElement_AttType.length() 
+                     + CBElement_Att_1_Type.length() 
                      + sizeof(CBBody5)-2 
-                     + CBElement_AttValue.length() 
-                     + sizeof(CBBody6)-2);
+                     + CBElement_Att_1_Value.length() 
+                     + sizeof(CBBody6)-2
+                     + CBElement_Att_2_Name.length() 
+                     + sizeof(CBBody7)-2
+                     + CBElement_Att_2_Type.length() 
+                     + sizeof(CBBody8)-2
+                     + CBElement_Att_2_Value.length() 
+                     + sizeof(CBBody9)-2);
+                     
                      
   WiFiLongMessage = CBStaticHeader;
   WiFiLongMessage += CBElement_Length;
@@ -198,12 +214,18 @@ void UpdateCB() {
   WiFiLongMessage += CBBody2;
   WiFiLongMessage += CBElement_ID;
   WiFiLongMessage += CBBody3;
-  WiFiLongMessage += CBElement_AttName;
+  WiFiLongMessage += CBElement_Att_1_Name;
   WiFiLongMessage += CBBody4;
-  WiFiLongMessage += CBElement_AttType;
+  WiFiLongMessage += CBElement_Att_1_Type;
   WiFiLongMessage += CBBody5;
-  WiFiLongMessage += CBElement_AttValue;
+  WiFiLongMessage += CBElement_Att_1_Value;
   WiFiLongMessage += CBBody6;
+  WiFiLongMessage += CBElement_Att_2_Name;
+  WiFiLongMessage += CBBody7;
+  WiFiLongMessage += CBElement_Att_2_Type;
+  WiFiLongMessage += CBBody8;
+  WiFiLongMessage += CBElement_Att_2_Value;
+  WiFiLongMessage += CBBody9;
   
   SendLongMessage(CBPostOK);
   CloseTCP();

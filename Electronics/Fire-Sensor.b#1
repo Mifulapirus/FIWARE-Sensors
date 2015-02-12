@@ -272,6 +272,28 @@ Source: http://optoelectronics.perkinelmer.com/content/Datasheets/DTS_Photocells
 </package>
 </packages>
 </library>
+<library name="lm35">
+<description>Sensores de Temperatura</description>
+<packages>
+<package name="TO92">
+<description>&lt;b&gt;TO-92&lt;/b&gt;</description>
+<wire x1="-2.095" y1="-1.651" x2="-0.7869" y2="2.5484" width="0.1524" layer="21" curve="-111.097684"/>
+<wire x1="0.7869" y1="2.5484" x2="2.095" y2="-1.651" width="0.1524" layer="21" curve="-111.097684"/>
+<wire x1="-2.095" y1="-1.651" x2="2.095" y2="-1.651" width="0.1524" layer="21"/>
+<wire x1="-2.254" y1="-0.254" x2="-0.286" y2="-0.254" width="0.1524" layer="51"/>
+<wire x1="-2.655" y1="-0.254" x2="-2.254" y2="-0.254" width="0.1524" layer="21"/>
+<wire x1="-0.286" y1="-0.254" x2="0.286" y2="-0.254" width="0.1524" layer="21"/>
+<wire x1="2.254" y1="-0.254" x2="2.655" y2="-0.254" width="0.1524" layer="21"/>
+<wire x1="0.286" y1="-0.254" x2="2.254" y2="-0.254" width="0.1524" layer="51"/>
+<wire x1="-0.7864" y1="2.5484" x2="0.7864" y2="2.5484" width="0.1524" layer="51" curve="-34.298964"/>
+<pad name="1" x="-1.27" y="0" drill="0.8128" shape="octagon"/>
+<pad name="2" x="0" y="1.905" drill="0.8128" shape="octagon"/>
+<pad name="3" x="1.27" y="0" drill="0.8128" shape="octagon"/>
+<text x="2.413" y="1.651" size="1.27" layer="25" ratio="10">&gt;NAME</text>
+<text x="2.921" y="-1.27" size="1.27" layer="27" ratio="10">&gt;VALUE</text>
+</package>
+</packages>
+</library>
 <library name="con-molex">
 <description>&lt;b&gt;Molex Connectors&lt;/b&gt;&lt;p&gt;
 &lt;author&gt;Created by librarian@cadsoft.de&lt;/author&gt;</description>
@@ -1588,6 +1610,7 @@ design rules under a new name.</description>
 <attribute name="OC_FARNELL" value="1097566" x="43.18" y="-6.35" size="1.778" layer="27" rot="R270" display="off"/>
 </element>
 <element name="LDR" library="photo-elements" package="T0-46-A10XX" value="A1050_09" x="34.29" y="31.75"/>
+<element name="THERMOMETER" library="lm35" package="TO92" value="LM35CZ" x="34.29" y="50.8" rot="R180"/>
 <element name="DHT11" library="con-molex" package="KK-156-3" value="" x="34.29" y="64.77">
 <attribute name="OC_NEWARK" value="unknown" x="53.34" y="15.24" size="1.778" layer="27" display="off"/>
 <attribute name="MPN" value="" x="53.34" y="15.24" size="1.778" layer="27" display="off"/>
@@ -1604,6 +1627,7 @@ design rules under a new name.</description>
 <contactref element="ARDUINO" pad="GND1"/>
 <contactref element="ARDUINO" pad="GND_USB"/>
 <contactref element="IC1" pad="1"/>
+<contactref element="THERMOMETER" pad="3"/>
 <contactref element="DHT11" pad="3"/>
 <contactref element="ESP8266" pad="7"/>
 <wire x1="46.3804" y1="31.4706" x2="46.3804" y2="31.75" width="1.27" layer="1"/>
@@ -1626,6 +1650,7 @@ design rules under a new name.</description>
 <contactref element="U$1" pad="RING"/>
 <wire x1="67.41" y1="61.38" x2="67.41" y2="62.23" width="1.27" layer="16"/>
 <wire x1="67.41" y1="62.23" x2="58.42" y2="62.23" width="1.27" layer="16"/>
+<wire x1="33.02" y1="50.8" x2="30.48" y2="50.8" width="1.27" layer="16"/>
 <wire x1="30.48" y1="50.8" x2="30.48" y2="45.72" width="1.27" layer="16"/>
 <wire x1="38.25" y1="64.77" x2="38.25" y2="71.12" width="1.27" layer="16"/>
 <wire x1="38.25" y1="71.12" x2="49.53" y2="71.12" width="1.27" layer="16"/>
@@ -1662,6 +1687,7 @@ design rules under a new name.</description>
 </signal>
 <signal name="+5V">
 <contactref element="LDR" pad="2"/>
+<contactref element="THERMOMETER" pad="1"/>
 <contactref element="DHT11" pad="1"/>
 <contactref element="ARDUINO" pad="5V"/>
 <wire x1="39.37" y1="36.83" x2="40.64" y2="36.83" width="1.27" layer="16"/>
@@ -1671,12 +1697,13 @@ design rules under a new name.</description>
 <wire x1="35.56" y1="33.02" x2="39.37" y2="33.02" width="1.27" layer="16"/>
 <wire x1="39.37" y1="33.02" x2="39.37" y2="36.83" width="1.27" layer="16"/>
 <wire x1="30.48" y1="64.77" x2="30.33" y2="64.77" width="1.27" layer="16"/>
+<wire x1="35.56" y1="50.8" x2="40.64" y2="50.8" width="1.27" layer="16"/>
 <via x="40.64" y="50.8" extent="1-16" drill="0.6" shape="square"/>
 <wire x1="40.64" y1="50.8" x2="40.64" y2="36.83" width="1.27" layer="1"/>
 <wire x1="30.48" y1="64.77" x2="30.48" y2="54.61" width="1.27" layer="16"/>
 <wire x1="30.48" y1="54.61" x2="35.56" y2="54.61" width="1.27" layer="16"/>
+<wire x1="35.56" y1="54.61" x2="35.56" y2="50.8" width="1.27" layer="16"/>
 <via x="40.64" y="36.83" extent="1-16" drill="0.6" shape="square"/>
-<wire x1="40.64" y1="50.8" x2="35.56" y2="54.61" width="0" layer="19" extent="16-16"/>
 </signal>
 <signal name="H/T">
 <contactref element="DHT11" pad="2"/>
@@ -1702,6 +1729,13 @@ design rules under a new name.</description>
 <wire x1="60.96" y1="30.48" x2="60.96" y2="41.91" width="1.27" layer="1"/>
 <via x="60.96" y="41.91" extent="1-16" drill="0.6" shape="square"/>
 <wire x1="60.96" y1="41.91" x2="55.88" y2="41.91" width="1.27" layer="16"/>
+</signal>
+<signal name="N$6">
+<contactref element="THERMOMETER" pad="2"/>
+<contactref element="ARDUINO" pad="A5"/>
+<wire x1="39.37" y1="48.895" x2="39.37" y2="44.45" width="1.27" layer="16"/>
+<wire x1="39.37" y1="44.45" x2="43.18" y2="44.45" width="1.27" layer="16"/>
+<wire x1="39.37" y1="48.895" x2="34.29" y2="48.895" width="1.27" layer="16"/>
 </signal>
 <signal name="VCC">
 <contactref element="ARDUINO" pad="VIN"/>

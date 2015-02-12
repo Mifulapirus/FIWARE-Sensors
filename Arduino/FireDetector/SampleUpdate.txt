@@ -1,3 +1,6 @@
+********************
+CIPMODE=0
+********************
 AT+CIPSTART="TCP","130.206.127.115",1026
 AT+CIPSEND=26
 POST /NGSI10/updateContext
@@ -13,3 +16,31 @@ AT+CIPSEND=61
 Content-Type:application/x-www-form-urlencoded; charset=UTF-8
 AT+CIPSEND=166
 {"contextElements":[{"type":"FireSensor","isPattern":"false","id":"Sensor1","attributes":[{"name":"thereisfire","type":"bool","value":"0"}]}],"updateAction":"UPDATE"}
+
+*******************
+CIPMODE = 1
+*******************
+AT+CIPSTART="TCP","130.206.127.115",1026
+AT+CIPSEND
+POST /NGSI10/updateContext
+AT+CIPSEND
+Accept:application/json
+AT+CIPSEND
+Accept-Encoding:deflate
+AT+CIPSEND
+Cache-Control:no-cache
+AT+CIPSEND
+Content-Length:166
+AT+CIPSEND
+Content-Type:application/x-www-form-urlencoded; charset=UTF-8
+AT+CIPSEND
+{"contextElements":[{"type":"FireSensor","isPattern":"false","id":"Sensor1","attributes":[{"name":"thereisfire","type":"bool","value":"0"}]}],"updateAction":"UPDATE"}
+
+
+*******************
+CIPMODE = 1
+All together
+*******************
+AT+CIPSTART="TCP","130.206.127.115",1026
+AT+CIPSEND
+POST /NGSI10/updateContext\r\nAccept:application/json\r\nAccept-Encoding:deflate\r\nCache-Control:no-cache\r\nContent-Length:166\r\nContent-Type:application/x-www-form-urlencoded; charset=UTF-8\r\n{"contextElements":[{"type":"FireSensor","isPattern":"false","id":"Sensor1","attributes":[{"name":"thereisfire","type":"bool","value":"0"}]}],"updateAction":"UPDATE"}

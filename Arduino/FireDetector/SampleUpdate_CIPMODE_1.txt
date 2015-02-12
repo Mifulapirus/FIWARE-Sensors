@@ -15,3 +15,5 @@ Content-Type: application/x-www-form-urlencoded; charset=UTF-8
 "type":"bool",
 "value":"0"}]}],
 "updateAction":"UPDATE"}
+
+"POST /NGSI10/updateContext\r\nAccept:application/json\r\nAccept-Encoding:deflate\r\nCache-Control:no-cache\r\nContent-Length:166\r\nContent-Type: application/json\r\n\r\n{\"contextElements\":[{\"type\":\"FireSensor\",\"isPattern\":\"false\",\"id\":\"Sensor1\",\"attributes\":[{\"name\":\"thereisfire\",\"type\":\"bool\",\"value\":\"0\"}]}],\"updateAction\":\"APPEND\"}\r\n"
