@@ -21,8 +21,8 @@
 * General variables
 *******************************/
 #define FIRMWARE_VERSION   "V 0.1"
-#define DEVICE_TYPE    "FireSensor" 
-#define DEVICE_ID      "FireSensor_1"
+#define DEVICE_TYPE    "\"FireSensor\"" 
+#define DEVICE_ID      "\"FireSensor_1\""
 long KeepAliveDelay = 300;
 long PreviousKeepAlive = 0;
 #define CONNECTED "Connected: "
@@ -31,9 +31,12 @@ long PreviousKeepAlive = 0;
 * WiFi Stuff
 *******************************/
 #define BAUD 9600
+//#define SSID "bamboo_demo"
+//#define PASS "paloverde"
+
 #define SSID "Interne"
 #define PASS "Mec0mebien"
-#define SERVER_PORT  "5555"
+
 ESP8266 wifi(WIFI_RX_PIN, WIFI_TX_PIN, WIFI_RST_PIN, BAUD);
 
 /*******************************
@@ -56,10 +59,11 @@ int ambientTemp = 0;
 * FIWARE Stuff
 *******************************/
 #define CB_IP "130.206.127.115"
+//#define CB_IP "192.168.4.42"
 #define CB_Port "1026"
 
-//#define CBStaticHeader         "POST /NGSI10/updateContext\r\nAccept:application/json\r\nAccept-Encoding:deflate\r\nCache-Control:no-cache\r\nContent-Type: application/json\r\nContent-Length:"
-#define CBStaticHeader         "POST /NGSI10/updateContext\r\nAccept:application/json\r\nAccept-Encoding:deflate\r\nCache-Control:no-cache\r\nContent-Length:"
+#define CBStaticHeader         "POST /NGSI10/updateContext\r\nAccept:application/json\r\nAccept-Encoding:deflate\r\nCache-Control:no-cache\r\nContent-Type: application/json\r\nContent-Length:"
+//#define CBStaticHeader         "POST /NGSI10/updateContext\r\nAccept:application/json\r\nAccept-Encoding:deflate\r\nCache-Control:no-cache\r\nContent-Length:"
 String CBElement_Length        = "169";
 #define CBBody1                "\r\n\r\n{\"contextElements\":[{\"type\":" //\"FireSensor\"
 #define CBElement_Type         DEVICE_TYPE
@@ -72,10 +76,10 @@ String CBElement_Length        = "169";
 #define CBBody5                ",\"value\":" //\"0\"
 String CBElement_Att_1_Value   = "\"0\"";
 #define CBBody6                "},{\"name\":"
-#define CBElement_Att_2_Name   "\"FirePosition\""
-#define CBBody7                ",\"type\":" //\"bool\"
+#define CBElement_Att_2_Name   "\"FirePos\""
+#define CBBody7                CBBody4 //\"bool\"
 #define CBElement_Att_2_Type   "\"int\""
-#define CBBody8                ",\"value\":" //\"0\"
+#define CBBody8                CBBody5 //\"0\"
 String CBElement_Att_2_Value   = "\"0\"";
 #define CBBody9                "}]}],\"updateAction\":\"APPEND\"}\r\n"
 
@@ -103,10 +107,11 @@ void setup() {
   
   //Initialize Seoftware I2C  
   i2c_init();
-  Serial.print("Amb: ");
+  //Serial.print("Amb: ");
   ambientTemp = getTPA81Data(AMBIENT);                    // Get reading of ambiant temperature and print to LCD03 screen
   Serial.println(ambientTemp);
-//  wifi.wifiLongMessage.reserve(400);
+  wifi.wifiLongMessage.reserve(400);
+  wifi.listen();
   bootUp(); 
 }
 
@@ -115,8 +120,12 @@ void bootUp() {
   byte _err = -1;
   Serial.println(DEVICE_ID);
   Serial.println(FIRMWARE_VERSION);
+  wifi.setTxMode(false);
+  delay(200);
+  //wifi.connectionMode("1");
+  //delay(200);
   
-  Serial.println("Init");
+  //Serial.println("Init");
   _err = wifi.init(SSID, PASS);
   if(_err != NO_ERROR) {
     Serial.print("E: ");
@@ -126,6 +135,12 @@ void bootUp() {
   else{
     Serial.print(CONNECTED);
     Serial.println(wifi.IP);
+  }
+  
+  _err = wifi.connectionMode("0");
+  if(_err != NO_ERROR) {
+    Serial.print("E: ");
+    Serial.println(String(_err));
   }
   
   wifi.setTxMode(false);
@@ -142,15 +157,17 @@ void loop() {
 * Context Broker functions
 ************************************/
 void UpdateCB() {
-  Serial.print("Updt");
+  Serial.print("U");
   Serial.println(millis());
   
   //Open TCP
-   Serial.println("Op");
-  byte _err = wifi.openTCP(CB_IP, CB_Port);
+  Serial.println("Op");
+  byte _err = wifi.openTCP(CB_IP, CB_Port, false);
+
   if(_err != NO_ERROR) {
     Serial.print("E: ");
     Serial.println(String(_err));
+    Serial.println(wifi.lastResponse);
   }
   
   else{
@@ -160,23 +177,23 @@ void UpdateCB() {
   delay(100);
   
   //Calculate CBElement_Length
-  CBElement_Length = String(sizeof(CBBody1)-2
+  CBElement_Length = String((sizeof(CBBody1)-1
                      + sizeof(CBElement_Type)-2 
-                     + sizeof(CBBody2)-2 
+                     + sizeof(CBBody2)-1 
                      + sizeof(CBElement_ID)-2
-                     + sizeof(CBBody3)-2 
+                     + sizeof(CBBody3)-1 
                      + sizeof(CBElement_Att_1_Name)-2
-                     + sizeof(CBBody4)-2 
+                     + sizeof(CBBody4)-1 
                      + sizeof(CBElement_Att_1_Type)-2
-                     + sizeof(CBBody5)-2 
+                     + sizeof(CBBody5)-1 
                      + CBElement_Att_1_Value.length() 
-                     + sizeof(CBBody6)-2
+                     + sizeof(CBBody6)-1
                      + sizeof(CBElement_Att_2_Name)-2
-                     + sizeof(CBBody7)-2
+                     + sizeof(CBBody7)-1
                      + sizeof(CBElement_Att_2_Type)-2 
-                     + sizeof(CBBody8)-2
+                     + sizeof(CBBody8)-1
                      + CBElement_Att_2_Value.length() 
-                     + sizeof(CBBody9)-2);
+                     + sizeof(CBBody9)-1));
                                    
   wifi.wifiLongMessage = CBStaticHeader;
   wifi.wifiLongMessage += CBElement_Length;
@@ -199,7 +216,7 @@ void UpdateCB() {
   wifi.wifiLongMessage += CBBody9;
   
 
-  _err = wifi.sendLongMessage(CBPostOK);
+  _err = wifi.sendLongMessage(CBPostOK, false);
   if(_err != NO_ERROR) {
     Serial.print("E: ");
     Serial.println(String(_err));
@@ -207,7 +224,7 @@ void UpdateCB() {
   }
   
   else{
-    Serial.println("200");
+    Serial.println(CBPostOK);
   }
   wifi.closeTCP();
   
@@ -231,22 +248,18 @@ void PeriodicUpdate() {
       while (temperature[i] > ambientTemp + FIRE_THRESHOLD) {  //FIRE!!!!
         CBElement_Att_1_Value = FIRE_ON;                          //There is fire
         CBElement_Att_2_Value = "\"" + String(servoPos) + "\"";   //Fire Location
-        Serial.print("FIRE @ ");
-        Serial.print(CBElement_Att_2_Value);
-        Serial.print("-> ");
-        Serial.print(temperature[i]);
-        Serial.println("C");
+        Serial.print("F @ " + String(CBElement_Att_2_Value) + "> " + String(temperature[i]));
         UpdateCB();
         temperature[i] = getTPA81Data(i+2);
-        delay(1000);
+        delay(5000);
       }
       
       if ((CBElement_Att_1_Value == FIRE_ON) && !(temperature[i] > ambientTemp + FIRE_THRESHOLD)) { //If there was FIRE, but not anymore, 
         CBElement_Att_1_Value = FIRE_OFF;                         //There is fire
         CBElement_Att_2_Value = "\"" + String(servoPos) + "\"";   //Fire Location
-        Serial.print("Cool @ ");
+        Serial.print("C @ ");
         Serial.print(CBElement_Att_2_Value);
-        Serial.print("-> ");
+        Serial.print("> ");
         Serial.print(temperature[i]);
         Serial.println("C");
         UpdateCB();
